@@ -2,151 +2,157 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 
-
 public class Main {
 
-
+    // ============================================================
+    // ================ FUNÇÃO PARA LER O CSV ======================
+    // ============================================================
+    /**
+     * Lê um arquivo CSV que contém uma COLUNA de números.
+     * Ignora a primeira linha caso seja um cabeçalho textual (ex: "Value").
+     * Retorna os valores dentro de uma NewArrayList<Integer>.
+     */
     public static NewArrayList<Integer> lerCSVParaLista(String caminhoArquivoCsv) {
-        NewArrayList<Integer> numeros = new NewArrayList<>();
+
+        NewArrayList<Integer> listaNumeros = new NewArrayList<>();
 
         try (BufferedReader leitor = new BufferedReader(new FileReader(caminhoArquivoCsv))) {
-            String linhaAtual = leitor.readLine(); // pode ser cabeçalho
 
-            // Se a primeira linha tiver letras (ex: "Value"), pula como cabeçalho
-            if (linhaAtual != null && linhaAtual.matches(".*[a-zA-Z].*")) {
-                linhaAtual = leitor.readLine();
+            String linha = leitor.readLine(); // primeira linha pode ser cabeçalho
+
+            // Se a primeira linha tiver letras, ignora (ex: "Value")
+            if (linha != null && linha.matches(".*[a-zA-Z].*")) {
+                linha = leitor.readLine(); // pula cabeçalho
             }
 
-            // Lê uma linha por vez; cada linha deve conter um único inteiro
-            while (linhaAtual != null) {
-                linhaAtual = linhaAtual.trim();
-                if (!linhaAtual.isEmpty()) {
+            // Lê linha por linha até acabar
+            while (linha != null) {
+                linha = linha.trim();
+
+                if (!linha.isEmpty()) {
                     try {
-                        numeros.add(Integer.parseInt(linhaAtual));
+                        listaNumeros.add(Integer.parseInt(linha));
                     } catch (NumberFormatException e) {
-                        // Se houver uma linha inválida, ignoramos silenciosamente
-                        // (poderia logar/contar erros se necessário)
+                        // ignora linhas inválidas
                     }
                 }
-                linhaAtual = leitor.readLine();
+
+                linha = leitor.readLine();
             }
 
         } catch (IOException e) {
-            System.out.println("Erro ao ler o arquivo: " + caminhoArquivoCsv + " -> " + e.getMessage());
+            System.out.println("Erro ao ler arquivo " + caminhoArquivoCsv + ": " + e.getMessage());
         }
 
-        return numeros;
+        return listaNumeros;
     }
 
+    // ============================================================
+    // ============ CONVERTE NewArrayList → int[] =================
+    // ============================================================
     /**
-     * Converte sua NewArrayList<Integer> em um vetor primitivo int[].
-     * Evita o uso de java.util.* (Arrays, List, etc.).
+     * Converte a NewArrayList personalizada em um vetor simples de int,
+     * para ser usado pelos algoritmos de ordenação.
      */
     public static int[] converterParaArray(NewArrayList<Integer> lista) {
+
         int tamanho = lista.getSize();
-        int[] resultado = new int[tamanho];
+        int[] vetorResultado = new int[tamanho];
+
         for (int i = 0; i < tamanho; i++) {
-            resultado[i] = lista.getElement(i);
+            vetorResultado[i] = lista.getElement(i);
         }
-        return resultado;
+
+        return vetorResultado;
     }
 
+    // ============================================================
+    // ===================== COPIAR VETOR =========================
+    // ============================================================
     /**
-     * Cria uma cópia profunda de um vetor int[] (sem usar Arrays.copyOf).
+     * Cria uma cópia profunda de um vetor para evitar que um algoritmo
+     * influencie os resultados do outro.
      */
-    public static int[] copiarVetor(int[] origem) {
-        int[] destino = new int[origem.length];
-        for (int i = 0; i < origem.length; i++) {
-            destino[i] = origem[i];
+    public static int[] copiarVetor(int[] vetorOriginal) {
+
+        int[] vetorCopia = new int[vetorOriginal.length];
+
+        for (int i = 0; i < vetorOriginal.length; i++) {
+            vetorCopia[i] = vetorOriginal[i];
         }
-        return destino;
+
+        return vetorCopia;
     }
 
+    // ============================================================
+    // ========================= MAIN ==============================
+    // ============================================================
     public static void main(String[] args) {
+
+        // Instância da classe que contém os algoritmos
         Sorts sorts = new Sorts();
 
-        // Ajuste os caminhos se necessário. Cada arquivo contém UMA coluna com números.
-        String[] caminhosArquivos = {
+        // Arquivos exigidos pelo TDE
+        String[] arquivosDeEntrada = {
                 "aleatorio_100.csv", "aleatorio_1000.csv", "aleatorio_10000.csv",
                 "crescente_100.csv", "crescente_1000.csv", "crescente_10000.csv",
                 "decrescente_100.csv", "decrescente_1000.csv", "decrescente_10000.csv"
         };
 
-        System.out.println("Arquivo\t\t\tBubbleSort(ms)\tInsertionSort(ms)\tQuickSort(ms)");
+        // Cabeçalho da tabela de resultados
+        System.out.println("Arquivo\t\t\tBubble(ms)\tInsertion(ms)\tQuick(ms)");
         System.out.println("--------------------------------------------------------------------------");
 
-        for (int indiceArquivo = 0; indiceArquivo < caminhosArquivos.length; indiceArquivo++) {
-            String caminhoAtual = caminhosArquivos[indiceArquivo];
+        // Loop para processar cada arquivo
+        for (String nomeArquivo : arquivosDeEntrada) {
 
-            // 1) Lê o CSV em NewArrayList<Integer>
-            NewArrayList<Integer> numerosLista = lerCSVParaLista(caminhoAtual);
+            // 1) Lê o CSV
+            NewArrayList<Integer> listaNumeros = lerCSVParaLista(nomeArquivo);
 
-            // 2) Converte para int[] uma única vez
-            int[] dadosOriginais = converterParaArray(numerosLista);
-            if (dadosOriginais.length == 0) {
-                System.out.println(caminhoAtual + "\t" + "ARQUIVO VAZIO/INVÁLIDO");
+            // 2) Converte para vetor int padrão
+            int[] vetorOriginal = converterParaArray(listaNumeros);
+
+            if (vetorOriginal.length == 0) {
+                System.out.println(nomeArquivo + "\tARQUIVO VAZIO/INVÁLIDO");
                 continue;
             }
 
-            // 3) Faz cópias independentes e mede tempos com nanoTime
+            // ============================================================
+            // ======================= BUBBLE SORT =========================
+            // ============================================================
+            int[] vetorBubble = copiarVetor(vetorOriginal);
+            long inicio = System.nanoTime();
+            sorts.bubbleSort(vetorBubble);
+            long fim = System.nanoTime();
+            double tempoBubbleMs = (fim - inicio) / 1_000_000.0;
 
-            // Bubble Sort
-            int[] dadosBubble = copiarVetor(dadosOriginais);
-            long inicioNs = System.nanoTime();
-            sorts.bubbleSort(dadosBubble);
-            long fimNs = System.nanoTime();
-            double tempoBubbleMs = (fimNs - inicioNs) / 1_000_000.0;
+            // ============================================================
+            // ===================== INSERTION SORT ========================
+            // ============================================================
+            int[] vetorInsertion = copiarVetor(vetorOriginal);
+            inicio = System.nanoTime();
+            sorts.insertionSort(vetorInsertion);
+            fim = System.nanoTime();
+            double tempoInsertionMs = (fim - inicio) / 1_000_000.0;
 
-            // Insertion Sort
-            int[] dadosInsertion = copiarVetor(dadosOriginais);
-            inicioNs = System.nanoTime();
-            sorts.insertionSort(dadosInsertion);
-            fimNs = System.nanoTime();
-            double tempoInsertionMs = (fimNs - inicioNs) / 1_000_000.0;
+            // ============================================================
+            // ======================= QUICK SORT ==========================
+            // ============================================================
+            int[] vetorQuick = copiarVetor(vetorOriginal);
+            inicio = System.nanoTime();
+            sorts.quickSort(vetorQuick);
+            fim = System.nanoTime();
+            double tempoQuickMs = (fim - inicio) / 1_000_000.0;
 
-            // Quick Sort
-            int[] dadosQuick = copiarVetor(dadosOriginais);
-            inicioNs = System.nanoTime();
-            quickSort(dadosQuick, 0, dadosQuick.length - 1);
-            fimNs = System.nanoTime();
-            double tempoQuickMs = (fimNs - inicioNs) / 1_000_000.0;
-
-            // 4) Exibe linha da tabela com os três tempos em ms
+            // ============================================================
+            // ================== IMPRIME RESULTADOS =======================
+            // ============================================================
             System.out.println(
-                    caminhoAtual + "\t" +
+                    nomeArquivo + "\t" +
                             String.format("%.3f", tempoBubbleMs) + "\t\t" +
-                            String.format("%.3f", tempoInsertionMs) + "\t\t\t" +
+                            String.format("%.3f", tempoInsertionMs) + "\t\t" +
                             String.format("%.3f", tempoQuickMs)
             );
         }
-    }
-
-
-    /** Ordena o vetor v no intervalo [ini..fim] usando QuickSort. */
-    public static void quickSort(int[] v, int ini, int fim) {
-        if (ini < fim) {
-            int indicePivo = particionar(v, ini, fim);
-            quickSort(v, ini, indicePivo - 1);   // parte esquerda
-            quickSort(v, indicePivo + 1, fim);   // parte direita
-        }
-    }
-
-    /**
-     * Particiona o vetor escolhendo o último elemento como pivô.
-     * Todos <= pivô ficam à esquerda; > pivô à direita.
-     * Retorna a posição final do pivô.
-     */
-    private static int particionar(int[] v, int ini, int fim) {
-        int pivo = v[fim];
-        int i = ini - 1; // i marca a "fronteira" dos elementos <= pivô
-        for (int j = ini; j < fim; j++) {
-            if (v[j] <= pivo) {
-                i++;
-                int temp = v[i]; v[i] = v[j]; v[j] = temp; // troca v[i] com v[j]
-            }
-        }
-        // Coloca o pivô na posição correta (i+1)
-        int temp = v[i + 1]; v[i + 1] = v[fim]; v[fim] = temp;
-        return i + 1;
     }
 }
